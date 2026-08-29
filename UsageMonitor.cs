@@ -26,20 +26,28 @@ public static class UsageMonitor
 
     public static List<ResourceUsage> GetActiveUsages()
     {
+        // Processos vivos agora — protege contra entradas órfãs no ConsentStore
+        // (app fechou/atualizou sem o Windows gravar LastUsedTimeStop; a chave
+        // fica marcada "em uso" pra sempre, ex.: Discord de versões antigas)
+        var running = new HashSet<string>(
+            System.Diagnostics.Process.GetProcesses().Select(p => p.ProcessName),
+            StringComparer.OrdinalIgnoreCase);
+
         var result = new List<ResourceUsage>();
         foreach (var (capability, _) in Capabilities)
         {
             var apps = new List<string>();
             // HKCU cobre apps do usuário; HKLM cobre serviços/sistema
-            CollectApps(Registry.CurrentUser, capability, apps);
-            CollectApps(Registry.LocalMachine, capability, apps);
+            CollectApps(Registry.CurrentUser, capability, apps, running);
+            CollectApps(Registry.LocalMachine, capability, apps, running);
             if (apps.Count > 0)
                 result.Add(new ResourceUsage(capability, apps.Distinct().ToList()));
         }
         return result;
     }
 
-    private static void CollectApps(RegistryKey hive, string capability, List<string> apps)
+    private static void CollectApps(RegistryKey hive, string capability, List<string> apps,
+        HashSet<string> running)
     {
         using var capKey = hive.OpenSubKey($@"{ConsentStorePath}\{capability}");
         if (capKey is null) return;
@@ -55,7 +63,12 @@ public static class UsageMonitor
                 foreach (var appName in subKey.GetSubKeyNames())
                 {
                     using var appKey = subKey.OpenSubKey(appName);
-                    if (IsInUse(appKey))
+                    if (!IsInUse(appKey)) continue;
+
+                    // Órfã se o exe não existe mais OU não há processo com esse nome
+                    var exePath = appName.Replace('#', '\\');
+                    var procName = Path.GetFileNameWithoutExtension(exePath);
+                    if (File.Exists(exePath) && running.Contains(procName))
                         apps.Add(FriendlyNameFromNonPackaged(appName));
                 }
             }
