@@ -19,13 +19,42 @@ namespace ResourcePins;
 
 public static class Program
 {
+    public static readonly string LogFile = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ResourcePins", "log.txt");
+
     [STAThread]
     public static void Main()
     {
+        // Instância única: se já há um rodando, sai em silêncio
+        using var mutex = new System.Threading.Mutex(true, @"Local\ResourcePins", out var isNew);
+        if (!isNew) return;
+
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+
+        // Nada de morte silenciosa: registra e segue de pé
+        app.DispatcherUnhandledException += (_, e) =>
+        {
+            Log("Erro na UI: " + e.Exception);
+            e.Handled = true;
+        };
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            Log("Erro fatal: " + e.ExceptionObject);
+
+        Log("Iniciado.");
         var overlay = new OverlayWindow();
         overlay.Show();
         app.Run();
+    }
+
+    public static void Log(string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(LogFile)!);
+            File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}  {message}{Environment.NewLine}");
+        }
+        catch { }
     }
 }
 
@@ -71,9 +100,9 @@ public class OverlayWindow : Window
         _tray = BuildTrayIcon();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _timer.Tick += (_, _) => Refresh();
+        _timer.Tick += (_, _) => SafeRefresh();
         _timer.Start();
-        Refresh();
+        SafeRefresh();
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -83,6 +112,13 @@ public class OverlayWindow : Window
         var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
         // TOOLWINDOW: fora do alt-tab; NOACTIVATE: nunca rouba foco
         SetWindowLong(hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+    }
+
+    /// <summary>Um tick que falha não pode derrubar o app.</summary>
+    private void SafeRefresh()
+    {
+        try { Refresh(); }
+        catch (Exception ex) { Program.Log("Falha ao atualizar pins: " + ex); }
     }
 
     private void Refresh()
@@ -158,8 +194,16 @@ public class OverlayWindow : Window
         {
             CheckOnClick = true
         };
-        testItem.CheckedChanged += (_, _) => { _testMode = testItem.Checked; Refresh(); };
+        testItem.CheckedChanged += (_, _) => { _testMode = testItem.Checked; SafeRefresh(); };
         menu.Items.Add(testItem);
+        menu.Items.Add("Abrir log de diagnóstico", null, (_, _) =>
+        {
+            Program.Log("Log aberto pelo usuário.");
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Program.LogFile)
+            {
+                UseShellExecute = true
+            });
+        });
         menu.Items.Add(new WinForms.ToolStripSeparator());
         menu.Items.Add("Sair", null, (_, _) =>
         {

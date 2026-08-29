@@ -26,13 +26,7 @@ public static class UsageMonitor
 
     public static List<ResourceUsage> GetActiveUsages()
     {
-        // Processos vivos agora — protege contra entradas órfãs no ConsentStore
-        // (app fechou/atualizou sem o Windows gravar LastUsedTimeStop; a chave
-        // fica marcada "em uso" pra sempre, ex.: Discord de versões antigas)
-        var running = new HashSet<string>(
-            System.Diagnostics.Process.GetProcesses().Select(p => p.ProcessName),
-            StringComparer.OrdinalIgnoreCase);
-
+        var running = GetRunningProcessNames();
         var result = new List<ResourceUsage>();
         foreach (var (capability, _) in Capabilities)
         {
@@ -44,6 +38,26 @@ public static class UsageMonitor
                 result.Add(new ResourceUsage(capability, apps.Distinct().ToList()));
         }
         return result;
+    }
+
+    /// <summary>
+    /// Nomes dos processos vivos. Um processo pode morrer entre a enumeração e a
+    /// leitura do nome, o que lança — por isso cada item vai em try/catch próprio.
+    /// </summary>
+    private static HashSet<string> GetRunningProcessNames()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        System.Diagnostics.Process[] procs;
+        try { procs = System.Diagnostics.Process.GetProcesses(); }
+        catch { return names; }
+
+        foreach (var p in procs)
+        {
+            try { names.Add(p.ProcessName); }
+            catch { /* processo morreu ou é protegido */ }
+            finally { p.Dispose(); }
+        }
+        return names;
     }
 
     private static void CollectApps(RegistryKey hive, string capability, List<string> apps,

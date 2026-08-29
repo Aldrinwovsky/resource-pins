@@ -1,0 +1,9 @@
+﻿fix: blinda o app contra morte silenciosa
+
+Process.GetProcesses/ProcessName lanca se um processo morre no meio da
+enumeracao; excecao em tick de DispatcherTimer derrubava o app calado.
+Agora cada leitura vai em try/catch, o tick e protegido, ha handler
+global de excecao e log em %APPDATA%\ResourcePins\log.txt (acessivel
+pelo menu da bandeja). Mutex garante instancia unica.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
