@@ -1,8 +1,8 @@
 ; Instalador do Resource Pins (Inno Setup 6)
 #define MyAppName "Resource Pins"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppExeName "ResourcePins.exe"
-#define MyPublishDir "bin\Release\net10.0-windows\publish"
+#define MyPublishDir "bin\Release\net10.0-windows\win-x64\publish"
 
 [Setup]
 AppId={{8F3A1B2C-9D4E-4F5A-B6C7-D8E9F0A1B2C3}

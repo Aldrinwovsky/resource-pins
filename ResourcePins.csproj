@@ -12,7 +12,11 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <AssemblyTitle>Resource Pins</AssemblyTitle>
     <Product>Resource Pins</Product>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
+    <!-- Self-contained: o usuario final nao precisa instalar o .NET -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
 
 </Project>

@@ -1,20 +1,23 @@
 # Roadmap — Resource Pins
 
-## v1 (atual)
-- [x] Pins topmost no canto superior direito (estilo contador de FPS)
-- [x] Câmera, microfone, localização, captura de tela via ConsentStore
-- [x] Estado aceso/apagado com opacidade (só acende em uso ativo real)
+## v1.1 (atual)
+- [x] Pins no overlay, canto superior direito (estilo contador de FPS)
+- [x] Ícone por recurso na barra de tarefas, visível só durante o uso
+- [x] Câmera, microfone, localização e captura de tela (WGC) via ConsentStore
+- [x] Estado aceso/apagado com opacidade — só acende em uso ativo real
 - [x] Tooltip com o(s) app(s) consumindo o recurso
-- [x] Ícone de guardião (escudo + olho) na bandeja
-- [x] Instalador Windows (Inno Setup) com autostart
+- [x] Filtro de entradas órfãs do registro (exige processo vivo)
+- [x] Ícone de guardião (escudo + olho), menu de bandeja, log de diagnóstico
+- [x] Instalador Windows (Inno Setup), self-contained, com autostart opcional
 
 ## v2 (planejado)
-- [ ] **Bloquear recurso por app**: a partir do pin/tooltip, revogar o acesso do app ao recurso (via `ConsentStore` deny / configurações de privacidade do Windows). Exige decidir UX (clique no pin abre lista de apps com botão "bloquear") e privilégio necessário (HKLM pede elevação).
-- [ ] Histórico de uso: log de quando cada app usou cada recurso (linha do tempo).
-- [ ] Notificação toast quando um app usa câmera/mic pela primeira vez.
-- [ ] Configurações: escolher quais pins monitorar, canto da tela, tamanho/opacidade.
-- [ ] Lista de apps "confiáveis" que não acendem o pin.
+- [ ] **Bloquear recurso por app** direto do pin. Ponto em aberto: a revogação em `HKLM` exige elevação, então provavelmente será um atalho para as configurações de privacidade do Windows no caso não-elevado.
+- [ ] **Histórico de uso** — linha do tempo de quando cada app usou cada recurso.
+- [ ] **Notificação** quando um app usa câmera/microfone pela primeira vez.
+- [ ] **Configurações na interface** — escolher recursos monitorados, canto da tela, tamanho e opacidade dos pins.
+- [ ] **Lista de apps confiáveis** que não acendem o pin (ex.: o software de reunião que você usa o dia todo).
 
-## Ideias (sem compromisso)
-- Suporte a múltiplos monitores (pin em cada tela ou na tela ativa).
-- Pin de rede/VPN e de acesso a pastas sensíveis (documentsLibrary, broadFileSystemAccess).
+## Investigar
+- [ ] **Detecção de captura por DXGI Desktop Duplication** (OBS e afins), hoje invisível para o ConsentStore. Caminhos possíveis: ETW ou heurística por processo. Só vale se der para fazer sem elevação e sem falso positivo — "OBS aberto" não é o mesmo que "OBS gravando".
+- [ ] Suporte a múltiplos monitores (pin na tela ativa ou em cada uma).
+- [ ] Pins adicionais: acesso a pastas sensíveis (`broadFileSystemAccess`), USB, HID.
