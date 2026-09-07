@@ -12,8 +12,8 @@
     <ApplicationIcon>icon.ico</ApplicationIcon>
     <AssemblyTitle>Resource Pins</AssemblyTitle>
     <Product>Resource Pins</Product>
-    <Version>1.1.0</Version>
-    <!-- Self-contained: o usuario final nao precisa instalar o .NET -->
+    <Version>1.2.0</Version>
+    <!-- Self-contained so end users do not need the .NET runtime installed -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>

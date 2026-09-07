@@ -7,8 +7,8 @@ using WinForms = System.Windows.Forms;
 namespace ResourcePins;
 
 /// <summary>
-/// Um icone na area de notificacao (barra de tarefas) por recurso.
-/// Fica visivel somente enquanto o recurso esta em uso ativo.
+/// One notification area icon per resource, shown only while that resource
+/// is in use.
 /// </summary>
 public sealed class TrayPins : IDisposable
 {
@@ -30,7 +30,7 @@ public sealed class TrayPins : IDisposable
         }
     }
 
-    /// <summary>Acende (mostra) ou apaga (esconde) o icone do recurso.</summary>
+    /// <summary>Shows or hides the icon for a resource.</summary>
     public void Update(string key, bool active, string tooltip)
     {
         if (!_icons.TryGetValue(key, out var icon)) return;
@@ -39,11 +39,11 @@ public sealed class TrayPins : IDisposable
         if (icon.Visible != active) icon.Visible = active;
     }
 
-    // NotifyIcon.Text estoura se passar de 63 caracteres
+    // NotifyIcon.Text throws above 63 characters
     private static string Trim(string s) =>
         s.Length <= 63 ? s : s[..60] + "...";
 
-    /// <summary>Desenha o pin (circulo colorido + glifo) como icone de 32px.</summary>
+    /// <summary>Draws the pin (colored circle plus glyph) as a 32px icon.</summary>
     private Icon BuildIcon(char glyph, Color color)
     {
         var bmp = new Bitmap(32, 32);
@@ -71,7 +71,7 @@ public sealed class TrayPins : IDisposable
         var handle = bmp.GetHicon();
         _handles.Add(handle);
         bmp.Dispose();
-        // Clona para nao depender do handle na hora de desenhar
+        // Clone so the icon does not depend on the handle at draw time
         using var temp = Icon.FromHandle(handle);
         return (Icon)temp.Clone();
     }

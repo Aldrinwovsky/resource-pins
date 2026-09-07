@@ -1,6 +1,6 @@
-; Instalador do Resource Pins (Inno Setup 6)
+; Resource Pins installer (Inno Setup 6)
 #define MyAppName "Resource Pins"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppExeName "ResourcePins.exe"
 #define MyPublishDir "bin\Release\net10.0-windows\win-x64\publish"
 
@@ -8,7 +8,8 @@
 AppId={{8F3A1B2C-9D4E-4F5A-B6C7-D8E9F0A1B2C3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-AppPublisher=Aldrin
+AppPublisher=Aldrin Wovsky
+AppSupportURL=https://github.com/Aldrinwovsky/resource-pins
 DefaultDirName={autopf}\ResourcePins
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
@@ -23,10 +24,10 @@ WizardStyle=modern
 CloseApplications=yes
 
 [Languages]
-Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "autostart"; Description: "Iniciar com o Windows (recomendado)"; GroupDescription: "Inicialização:"
+Name: "autostart"; Description: "Start with Windows (recommended)"; GroupDescription: "Startup:"
 
 [Files]
 Source: "{#MyPublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
@@ -36,13 +37,13 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks:
 
 [Registry]
-; Autostart via chave Run — aparece em Gerenciador de Tarefas > Aplicativos de inicialização
+; Autostart via the Run key, so it shows under Task Manager > Startup apps
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; \
     ValueType: string; ValueName: "ResourcePins"; ValueData: """{app}\{#MyAppExeName}"""; \
     Flags: uninsdeletevalue; Tasks: autostart
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "Abrir o {#MyAppName} agora"; \
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; \
     Flags: nowait postinstall skipifsilent
 
 [UninstallRun]

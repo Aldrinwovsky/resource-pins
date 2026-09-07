@@ -1,80 +1,82 @@
 # Resource Pins
 
-Indicadores de privacidade para Windows: pins minúsculos que mostram, de relance, **quais recursos sensíveis estão em uso agora** — e por qual aplicativo.
+Privacy indicators for Windows. Small pins show which sensitive resources are in use right now, and which app is using them.
 
-![Pins do Resource Pins: câmera e microfone acesos, localização e captura de tela apagados](docs/pins.png)
+![Camera and microphone pins lit, location and screen capture pins dim](docs/pins.png)
 
-| Pin | Recurso | Cor quando aceso |
-|-----|---------|------------------|
-| 📷 | Câmera | Verde |
-| 🎤 | Microfone | Vermelho |
-| 📍 | Localização | Azul |
-| 🖥️ | Captura de tela | Roxo |
+| Pin | Resource | Color when lit |
+|-----|----------|----------------|
+| 📷 | Camera | Green |
+| 🎤 | Microphone | Red |
+| 📍 | Location | Blue |
+| 🖥️ | Screen capture | Purple |
 
-Os pins aparecem em dois lugares, e você escolhe quais quer (menu da bandeja):
+Pins show up in two places, and you pick which ones you want from the tray menu:
 
-- **Overlay na tela** — quatro bolinhas de 16px no canto superior direito, estilo contador de FPS. Sempre visíveis: cinza translúcido quando ocioso, coloridas com brilho quando em uso.
-- **Barra de tarefas** — um ícone na área de notificação por recurso, que aparece só enquanto aquele recurso está sendo usado.
+- **On-screen overlay** — four 16px dots in the top-right corner, similar to an FPS counter. Always visible: translucent gray when idle, colored and glowing when in use.
+- **Taskbar** — one notification area icon per resource, present only while that resource is in use.
 
-Passe o mouse em qualquer um dos dois para ver **qual aplicativo** está usando.
+Hover either one to see which app is responsible.
 
-## O que ele detecta (e o que não detecta)
+## What it detects, and what it doesn't
 
-Esta é a parte importante, e a maioria das ferramentas parecidas não é honesta sobre ela.
+Windows keeps a record in `CapabilityAccessManager\ConsentStore` of which apps access each resource. An app counts as in use when its entry has `LastUsedTimeStart > 0` and `LastUsedTimeStop == 0`. Resource Pins polls that once per second. No hooks, no drivers, no elevation, negligible CPU cost.
 
-O Windows mantém um registro (`CapabilityAccessManager\ConsentStore`) de quais aplicativos acessam cada recurso. Um app aparece como "em uso agora" quando tem `LastUsedTimeStart > 0` e `LastUsedTimeStop == 0`. O Resource Pins lê exatamente isso, a cada segundo — sem hooks, sem drivers, sem elevação, custo de CPU desprezível.
+The consequence is that the app only sees what Windows records.
 
-**Consequência direta:** o app só enxerga o que o Windows registra.
+**Detected:** camera and microphone for essentially any app (browsers, Discord, Teams, OBS, games), and screen sharing through the modern **Windows.Graphics.Capture** API — Teams, Discord, Meet, Chrome, Edge, Snipping Tool.
 
-✅ **Detecta bem** — câmera e microfone de praticamente qualquer aplicativo (navegadores, Discord, Teams, OBS, jogos), e compartilhamento de tela feito pela API moderna **Windows.Graphics.Capture**: Teams, Discord, Meet, Chrome/Edge, Ferramenta de Captura.
+**Not detected:** screen capture through lower-level APIs such as **DXGI Desktop Duplication**, which do not go through the Windows permission system. In practice this includes OBS Studio's Display Capture: OBS shows up correctly on the camera and microphone pins, but the screen capture pin stays dim while it records your screen that way. This is a limit of the data source, not a bug, and there is no fix without ETW or a driver.
 
-❌ **Não detecta** — captura de tela feita por APIs de baixo nível como **DXGI Desktop Duplication**, que não passam pelo mecanismo de permissões do Windows. Na prática, isso inclui o **Display Capture do OBS Studio**: o OBS aparece corretamente nos pins de câmera e microfone, mas o pin de captura de tela permanece apagado enquanto ele grava sua tela por esse método. Isso é uma limitação da fonte de dados, não um bug — e não tem conserto sem partir para ETW ou driver.
+In short: trust the purple pin to answer "is someone seeing my screen in a call?". Don't treat it as a recorder detector.
 
-Traduzindo para o uso real: confie no pin roxo para responder *"alguém está vendo minha tela numa chamada?"*. Não confie nele como detector de gravadores.
+Worth knowing: Windows 11 already shows its own camera and microphone indicator in the tray. What this project adds is seeing all four resources at once, always in view.
 
-**Também vale saber:** o Windows 11 já mostra um indicador próprio de câmera/microfone na bandeja. O que este projeto acrescenta é ver os quatro recursos de uma vez, sempre à vista, sem precisar abrir nada.
+## Install
 
-## Instalação
+Download the installer from [Releases](../../releases) and run it.
 
-Baixe o instalador em [Releases](../../releases) e execute.
+The installer is **not code signed** — a signing certificate costs a few hundred dollars a year, which is hard to justify for a free utility. SmartScreen will show "Windows protected your PC"; choose **More info → Run anyway**. If you would rather not trust a third-party binary, build it yourself: four source files, no external dependencies.
 
-O instalador **não é assinado digitalmente** (certificado de code signing custa algumas centenas de dólares por ano, o que não se justifica num utilitário gratuito). O SmartScreen vai exibir "O Windows protegeu o computador" — clique em **Mais informações → Executar assim mesmo**. Se preferir não confiar num binário de terceiro, compile você mesmo: são três arquivos de código e nenhuma dependência externa.
+It installs to `%LOCALAPPDATA%\Programs\ResourcePins`, needs no administrator rights, and can optionally start with Windows.
 
-O app é instalado em `%LOCALAPPDATA%\Programs\ResourcePins`, sem exigir privilégios de administrador, e pode ser configurado para iniciar com o Windows.
-
-## Compilar
+## Build
 
 ```
 dotnet publish -c Release
 ```
 
-Requer o [.NET 10 SDK](https://dotnet.microsoft.com/download). A publicação é *self-contained* (win-x64), ou seja, o resultado roda em máquinas sem o .NET instalado.
+Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download). The publish is self-contained (win-x64), so the output runs on machines without .NET installed.
 
-Para gerar o instalador, com [Inno Setup 6](https://jrsoftware.org/isdl.php):
+To build the installer, with [Inno Setup 6](https://jrsoftware.org/isdl.php):
 
 ```
 iscc installer.iss
 ```
 
-## Uso
+## Usage
 
-O ícone do guardião (escudo com olho) fica na bandeja do sistema — no Windows 11 ele nasce na área de ícones ocultos, atrás da setinha `^`; arraste-o para fora se quiser mantê-lo à vista. Clique com o botão direito para:
+The tray icon (a shield with an eye) sits in the notification area. On Windows 11 it starts in the hidden icons flyout behind the `^` chevron; drag it out to keep it visible. Right-click for:
 
-- **Mostrar na barra de tarefas** — liga/desliga os ícones por recurso
-- **Mostrar pins na tela (overlay)** — liga/desliga as bolinhas do canto
-- **Modo teste** — acende todos os pins, útil para conferir posicionamento
-- **Abrir log de diagnóstico** — registro em `%APPDATA%\ResourcePins\log.txt`
+- **Show in taskbar** — toggle the per-resource icons
+- **Show on-screen pins** — toggle the corner overlay
+- **Test mode** — light up every pin, useful for checking placement
+- **Open diagnostic log** — written to `%APPDATA%\ResourcePins\log.txt`
 
-**Limitação de exibição:** jogos em tela cheia *exclusiva* cobrem qualquer overlay comum. Em modo janela ou borderless o overlay funciona normalmente — e os ícones da barra de tarefas continuam valendo de qualquer forma.
+Display limitation: games running in *exclusive* fullscreen cover any ordinary overlay. Windowed and borderless modes are fine, and the taskbar icons work regardless.
 
-## Privacidade
+## Privacy
 
-O app lê o registro local e a lista de processos em execução. Não envia nada para lugar nenhum, não faz conexões de rede, não grava histórico de uso. O único arquivo que ele escreve é o log de diagnóstico e as preferências, ambos em `%APPDATA%\ResourcePins`.
+The app reads the local registry and the list of running processes. It makes no network connections, sends nothing anywhere, and keeps no usage history. The only files it writes are the diagnostic log and your preferences, both under `%APPDATA%\ResourcePins`.
+
+## Contributing
+
+Bug reports and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Roadmap
 
-Ver [ROADMAP.md](ROADMAP.md). O item principal da v2 é poder **bloquear** o acesso de um app a um recurso direto pelo pin.
+See [ROADMAP.md](ROADMAP.md). The main item for v2 is blocking an app's access to a resource from the pin itself.
 
-## Licença
+## License
 
-MIT — ver [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).

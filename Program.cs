@@ -25,22 +25,22 @@ public static class Program
     [STAThread]
     public static void Main()
     {
-        // Instancia unica: se ja ha um rodando, sai em silencio
+        // Single instance: exit quietly if one is already running
         using var mutex = new System.Threading.Mutex(true, @"Local\ResourcePins", out var isNew);
         if (!isNew) return;
 
         var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
 
-        // Nada de morte silenciosa: registra e segue de pe
+        // Log failures instead of dying silently
         app.DispatcherUnhandledException += (_, e) =>
         {
-            Log("Erro na UI: " + e.Exception);
+            Log("UI error: " + e.Exception);
             e.Handled = true;
         };
         AppDomain.CurrentDomain.UnhandledException += (_, e) =>
-            Log("Erro fatal: " + e.ExceptionObject);
+            Log("Fatal error: " + e.ExceptionObject);
 
-        Log("Iniciado.");
+        Log("Started.");
         var overlay = new OverlayWindow();
         overlay.Show();
         app.Run();
@@ -70,18 +70,18 @@ public class OverlayWindow : Window
 
     private record PinDef(string Key, string Label, char Icon, Color Color, string[] Caps);
 
-    // Glifos do Segoe MDL2 Assets: E714 Video, E720 Microphone, E81D Location, E7F4 TVMonitor
+    // Segoe MDL2 Assets glyphs: E714 Video, E720 Microphone, E81D Location, E7F4 TVMonitor
     private static readonly PinDef[] Pins =
     [
         new("camera", "Camera", (char)0xE714, Color.FromRgb(46, 204, 113), ["webcam"]),
-        new("mic", "Microfone", (char)0xE720, Color.FromRgb(231, 76, 60), ["microphone"]),
-        new("local", "Localizacao", (char)0xE81D, Color.FromRgb(52, 152, 219), ["location"]),
-        new("tela", "Captura de tela", (char)0xE7F4, Color.FromRgb(155, 89, 182),
+        new("mic", "Microphone", (char)0xE720, Color.FromRgb(231, 76, 60), ["microphone"]),
+        new("location", "Location", (char)0xE81D, Color.FromRgb(52, 152, 219), ["location"]),
+        new("screen", "Screen capture", (char)0xE7F4, Color.FromRgb(155, 89, 182),
             ["graphicsCaptureProgrammatic", "graphicsCaptureWithoutBorder"]),
     ];
 
-    private const double ActiveOpacity = 0.90; // aceso: em uso ativo agora
-    private const double IdleOpacity = 0.22;   // apagado: recurso ocioso
+    private const double ActiveOpacity = 0.90; // lit: in use right now
+    private const double IdleOpacity = 0.22;   // dim: resource idle
 
     public OverlayWindow()
     {
@@ -97,7 +97,6 @@ public class OverlayWindow : Window
         _panel = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(2) };
         Content = _panel;
 
-        // Ancorado no canto superior direito, estilo contador de FPS
         SizeChanged += (_, _) => AnchorToCorner();
 
         var menu = BuildMenu();
@@ -118,20 +117,19 @@ public class OverlayWindow : Window
         base.OnSourceInitialized(e);
         var hwnd = new WindowInteropHelper(this).Handle;
         var ex = GetWindowLong(hwnd, GWL_EXSTYLE);
-        // TOOLWINDOW: fora do alt-tab; NOACTIVATE: nunca rouba foco
+        // TOOLWINDOW keeps it out of alt-tab, NOACTIVATE keeps it from taking focus
         SetWindowLong(hwnd, GWL_EXSTYLE, ex | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
     }
 
-    /// <summary>Um tick que falha nao pode derrubar o app.</summary>
+    /// <summary>A failing tick must not bring the app down.</summary>
     private void SafeRefresh()
     {
         try { Refresh(); }
-        catch (Exception ex) { Program.Log("Falha ao atualizar pins: " + ex); }
+        catch (Exception ex) { Program.Log("Failed to refresh pins: " + ex); }
     }
 
     private void Refresh()
     {
-        // cap -> apps usando AGORA (LastUsedTimeStart > 0 e LastUsedTimeStop == 0)
         var active = UsageMonitor.GetActiveUsages()
             .ToDictionary(u => u.Capability, u => u.Apps);
 
@@ -145,15 +143,15 @@ public class OverlayWindow : Window
             var isActive = apps.Count > 0 || _testMode;
 
             var tooltip = isActive
-                ? $"{pin.Label} - EM USO\n{string.Join("\n", apps.Select(a => "- " + a))}".TrimEnd()
-                : $"{pin.Label} - ocioso";
+                ? $"{pin.Label} in use\n{string.Join("\n", apps.Select(a => "- " + a))}".TrimEnd()
+                : $"{pin.Label} idle";
 
             _panel.Children.Add(BuildPin(pin.Icon, pin.Color, isActive, tooltip));
 
-            // Barra de tarefas: o icone aparece so enquanto o recurso esta em uso
+            // Taskbar: the icon exists only while the resource is in use
             var trayText = apps.Count > 0
                 ? $"{pin.Label}: {string.Join(", ", apps)}"
-                : $"{pin.Label} em uso";
+                : $"{pin.Label} in use";
             _trayPins.Update(pin.Key, isActive && _showTrayPins, trayText);
         }
 
@@ -162,7 +160,7 @@ public class OverlayWindow : Window
 
         AnchorToCorner();
 
-        // Reafirma o topmost - outras janelas topmost podem ter passado na frente
+        // Other topmost windows can get in front, so claim the top spot again
         var hwnd = new WindowInteropHelper(this).Handle;
         if (hwnd != IntPtr.Zero)
             SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0,
@@ -194,7 +192,6 @@ public class OverlayWindow : Window
         };
         if (isActive)
         {
-            // brilho na cor do pin pra "acender" de verdade
             border.Effect = new System.Windows.Media.Effects.DropShadowEffect
             {
                 Color = color,
@@ -211,7 +208,7 @@ public class OverlayWindow : Window
     {
         var menu = new WinForms.ContextMenuStrip();
 
-        var trayItem = new WinForms.ToolStripMenuItem("Mostrar na barra de tarefas")
+        var trayItem = new WinForms.ToolStripMenuItem("Show in taskbar")
         {
             CheckOnClick = true,
             Checked = _showTrayPins,
@@ -224,7 +221,7 @@ public class OverlayWindow : Window
         };
         menu.Items.Add(trayItem);
 
-        var overlayItem = new WinForms.ToolStripMenuItem("Mostrar pins na tela (overlay)")
+        var overlayItem = new WinForms.ToolStripMenuItem("Show on-screen pins")
         {
             CheckOnClick = true,
             Checked = _showOverlay,
@@ -237,22 +234,22 @@ public class OverlayWindow : Window
         };
         menu.Items.Add(overlayItem);
 
-        var testItem = new WinForms.ToolStripMenuItem("Modo teste (acender todos os pins)")
+        var testItem = new WinForms.ToolStripMenuItem("Test mode (light up every pin)")
         {
             CheckOnClick = true
         };
         testItem.CheckedChanged += (_, _) => { _testMode = testItem.Checked; SafeRefresh(); };
         menu.Items.Add(testItem);
 
-        menu.Items.Add("Abrir log de diagnostico", null, (_, _) =>
+        menu.Items.Add("Open diagnostic log", null, (_, _) =>
         {
-            Program.Log("Log aberto pelo usuario.");
+            Program.Log("Log opened by user.");
             System.Diagnostics.Process.Start(
                 new System.Diagnostics.ProcessStartInfo(Program.LogFile) { UseShellExecute = true });
         });
 
         menu.Items.Add(new WinForms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) =>
+        menu.Items.Add("Exit", null, (_, _) =>
         {
             _tray!.Visible = false;
             _trayPins?.Dispose();
@@ -263,7 +260,6 @@ public class OverlayWindow : Window
 
     private WinForms.NotifyIcon BuildTrayIcon(WinForms.ContextMenuStrip menu)
     {
-        // Usa o icone do proprio exe (guardiao); escudo do sistema como fallback
         Drawing.Icon trayIcon;
         try
         {
@@ -275,7 +271,7 @@ public class OverlayWindow : Window
         return new WinForms.NotifyIcon
         {
             Icon = trayIcon,
-            Text = "Resource Pins - guardiao de camera/mic/tela",
+            Text = "Resource Pins",
             Visible = true,
             ContextMenuStrip = menu,
         };
@@ -283,7 +279,6 @@ public class OverlayWindow : Window
 
     private void AnchorToCorner()
     {
-        // Canto superior direito da tela primaria, com uma folguinha
         Left = SystemParameters.PrimaryScreenWidth - ActualWidth - 8;
         Top = 4;
     }

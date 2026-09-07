@@ -2,7 +2,7 @@ using System.IO;
 
 namespace ResourcePins;
 
-/// <summary>Preferencias simples em arquivo texto (chave=valor).</summary>
+/// <summary>Preferences stored as key=value lines in a text file.</summary>
 public static class Settings
 {
     private static readonly string File_ = Path.Combine(
